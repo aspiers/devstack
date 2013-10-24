@@ -96,17 +96,22 @@ git clone -b gh-pages $GH_PAGES_REPO docs
 
 # Build list of scripts to process
 FILES=""
+failed=()
 for f in $(find . -name .git -prune -o \( -type f -name \*.sh -not -path \*shocco/\* -print \)); do
     echo $f
     FILES+="$f "
     mkdir -p docs/`dirname $f`;
-    $SHOCCO $f > docs/$f.html
+    if ! $SHOCCO --rst --strict "$f" > "docs/$f.html"; then
+        failed+=("$f")
+    fi
 done
 for f in $(find functions lib samples -type f -name \*); do
     echo $f
     FILES+="$f "
     mkdir -p docs/`dirname $f`;
-    $SHOCCO $f > docs/$f.html
+    if ! $SHOCCO --rst --strict "$f" > "docs/$f.html"; then
+        failed+=("$f")
+    fi
 done
 echo "$FILES" >docs-files
 
@@ -133,3 +138,12 @@ else
     fi
     echo "Built docs in $TMP_ROOT"
 fi
+
+if [[ "${failed[@]}" ]]; then
+    echo >&2 "Building documentation failed for the following files:"
+    for f in "${failed[@]}"; do
+        echo >&2 "  $f"
+    done
+fi
+
+exit "${#failed[@]}"
